@@ -1,0 +1,5 @@
+# Sender accounts (format: email|password)
+# One sender per line
+
+sender1@example.com|your_password_here
+sender2@example.com|your_password_here
