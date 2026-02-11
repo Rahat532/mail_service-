@@ -10,7 +10,7 @@ from pathlib import Path
 from tqdm import tqdm
 from dotenv import load_dotenv
 
-from gmail_service import GmailService
+from smtp_service import SMTPService
 from reader import Reader
 from utils import render_template
 
@@ -27,8 +27,6 @@ logging.basicConfig(
 )
 console = logging.StreamHandler()
 console.setLevel(logging.INFO)
-# console.setFormatter(logging.Formatter("%(message)s"))
-# logging.getLogger('').addHandler(console) # Don't add to root to avoid tqdm interference
 
 FAILED_CSV = Path("failed_emails.csv")
 LOG_FILE = LOG_DIR / "sent.log"
@@ -61,37 +59,40 @@ def load_failures():
         for row in reader:
             try:
                 lead = json.loads(row["attributes"])
-                # Preserve the original attributes
                 failures.append(lead)
             except json.JSONDecodeError:
                 continue
     return failures
 
+def load_template_file(path: Path) -> str:
+    if not path.exists():
+        return None
+    return path.read_text(encoding="utf-8").strip()
+
 def main():
-    parser = argparse.ArgumentParser(description="Gmail Bulk Sender")
+    parser = argparse.ArgumentParser(description="Gmail Bulk Sender (SMTP)")
     parser.add_argument("--leads", default="leads.csv", help="Path to leads file (csv/txt)")
-    parser.add_argument("--content", default="content.txt", help="Path to content file (html/txt)")
+    parser.add_argument("--templates-dir", default="templates", help="Directory containing subject.txt, body.txt, body.html")
     parser.add_argument("--limit", type=int, default=0, help="Max emails to send (0 for all)")
-    parser.add_argument("--draft", action="store_true", help="Create drafts instead of sending")
-    parser.add_argument("--dry-run", action="store_true", help="Simulate sending without API calls")
+    parser.add_argument("--dry-run", action="store_true", help="Simulate sending without SMTP connection")
     parser.add_argument("--retry", action="store_true", help="Retry failed emails from failed_emails.csv")
-    
+    parser.add_argument("--live", action="store_true", help="Actually send emails (override default dry-run mode)")
+
     args = parser.parse_args()
     
+    # Mode Logic
+    dry_run = args.dry_run or (os.getenv("DEFAULT_MODE", "dry-run") == "dry-run" and not args.live)
+
     # 1. Start & Check Retry
     leads = []
-    
     if args.retry:
         print("🔄 Loading failed emails for retry...")
         leads = load_failures()
         if not leads:
             print("No failed emails found to retry.")
             return
-        # If retrying, we might want to clear the old failure file or append to a new one
-        # For simplicity, we'll rename the old one to .bak
         FAILED_CSV.rename(FAILED_CSV.with_suffix(f".bak.{int(time.time())}"))
     else:
-        # Normal Load
         recipients_path = Path(args.leads)
         if not recipients_path.exists():
             print(f"❌ Leads file not found: {recipients_path}")
@@ -104,37 +105,47 @@ def main():
         print("⚠️ No leads found.")
         return
 
-    # Apply Limit
     if args.limit > 0:
         leads = leads[:args.limit]
 
     print(f"✅ Loaded {len(leads)} leads.")
 
-    # 2. Load Content
-    content_path = Path(args.content)
-    if not content_path.exists():
-        print(f"❌ Content file not found: {content_path}")
+    # 2. Load Templates
+    tpl_dir = Path(args.templates_dir)
+    if not tpl_dir.exists():
+        print(f"❌ Templates directory not found: {tpl_dir}")
+        return
+
+    subj_tpl = load_template_file(tpl_dir / "subject.txt")
+    body_txt_tpl = load_template_file(tpl_dir / "body.txt")
+    body_html_tpl = load_template_file(tpl_dir / "body.html")
+
+    if not subj_tpl:
+        print(f"❌ Missing {tpl_dir}/subject.txt")
+        return
+    if not body_txt_tpl and not body_html_tpl:
+        print(f"❌ Must provide at least body.txt or body.html in {tpl_dir}")
         return
     
-    subj_tpl, body_html_tpl, body_txt_tpl = Reader.load_content(content_path)
-    print(f"📄 Loaded content: '{subj_tpl}'")
+    print(f"📄 Loaded templates from: {tpl_dir}")
 
-    # 3. Authenticate
-    service = None
-    if not args.dry_run:
-        print("🔐 Authenticating with Gmail...")
-        try:
-            gmail = GmailService()
-            service = gmail.authenticate()
-        except Exception as e:
-            print(f"❌ Authentication failed: {e}")
+    # 3. Authenticate (Skip if Dry Run)
+    smtp_service = None
+    if not dry_run:
+        smtp_email = os.getenv("SMTP_EMAIL")
+        smtp_password = os.getenv("SMTP_PASSWORD")
+
+        if not smtp_email or not smtp_password:
+            print("❌ Error: SMTP_EMAIL and SMTP_PASSWORD must be set in .env")
             return
 
+        print(f"🔐 Initializing SMTP for {smtp_email}...")
+        smtp_service = SMTPService(smtp_email, smtp_password)
+
     # 4. Processing Loop
-    print(f"🚀 Starting {'DRY RUN ' if args.dry_run else ''}{'DRAFT ' if args.draft else 'SENDING '} process...")
+    print(f"🚀 Starting {'DRY RUN ' if dry_run else ''}process...")
     
     delay = float(os.getenv("RATE_LIMIT_DELAY", 2))
-    
     success_count = 0
     fail_count = 0
     
@@ -144,66 +155,43 @@ def main():
         email = lead.get("email")
         pbar.set_description(f"Processing {email}")
         
-        # Render
         footer = "\n\nTo unsubscribe, reply with 'UNSUBSCRIBE'"
-        
-        # Prepare content variables
-        # Ensure common keys are available even if not in CSV
-        # lead already has the keys from CSV
         
         try:
             subject = render_template(subj_tpl, lead)
             
             body_html = None
             if body_html_tpl:
-                # Naive HTML footer append - rigorous way is parsing HTML </body>
-                # For now simple string append if plain text, or just appending to HTML string
-                # We can wrap the footer in a div
                 html_footer = "<br><br><small>To unsubscribe, reply with 'UNSUBSCRIBE'</small>"
                 body_html = render_template(body_html_tpl, lead) + html_footer
             
             body_text = None
             if body_txt_tpl:
                 body_text = render_template(body_txt_tpl, lead) + footer
-            elif body_html: 
-                # If only HTML provided, we should probably generate a basic text version or leave it None
-                # Gmail API handles strictly HTML fine usually, but nice to have alt text.
-                # For this implementation, we rely on what reader returns.
-                pass
                 
-            if args.dry_run:
-                # Simulate
-                time.sleep(0.1)
-                # logging.info(f"[DRY RUN] To: {email} | Subj: {subject}")
+            if dry_run:
+                # time.sleep(0.1)
                 success_count += 1
                 continue
 
-            # API Call
-            message_body = gmail.create_message(email, subject, body_html, body_text)
-            
-            if args.draft:
-                gmail.create_draft(message_body)
-            else:
-                gmail.send_message(message_body)
+            # Send via SMTP
+            smtp_service.send_email(to_email=email, subject=subject, body_html=body_html, body_text=body_text)
                 
             log_success(email)
             success_count += 1
             
-            # Rate Limit
-            time.sleep(delay + random.random()) # Add jitter
+            time.sleep(delay + random.random())
 
         except Exception as e:
             fail_count += 1
             logging.error(f"Failed to send to {email}: {e}")
             log_failure(lead, e)
-            # Optional: Backoff here if it's a rate limit error (429)
-            # For simplest MVC, we just log and continue, managing retries later.
     
     print("\n" + "="*30)
     print(f"🎉 Completed.")
     print(f"✅ Success: {success_count}")
     print(f"❌ Failed: {fail_count}")
-    print(f"📝 Logs: {LOG_DIR}")
+    
     if fail_count > 0:
         print(f"⚠️  Failures saved to {FAILED_CSV}. Run with --retry to retry.")
 

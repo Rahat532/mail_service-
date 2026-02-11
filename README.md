@@ -1,25 +1,24 @@
-# Gmail Bulk Mailer
+# Gmail Bulk Mailer (SMTP Version)
 
-A Python-based bulk email tool using the **Gmail API** (OAuth 2.0).  
-Supports **HTML templates**, **Draft Mode**, **Resilient Retry Logic**, and **Rate Limiting**.
+A Python-based bulk email tool using **Gmail SMTP** and **App Passwords**.
+Supports **HTML templates**, **Resilient Retry Logic**, and **Rate Limiting**.
 
 ---
 
 ## 🚀 Features
 
-- **Gmail API Integration**: Uses OAuth 2.0 for secure, token-based authentication.
-- **Draft Mode**: Create drafts for review instead of sending immediately.
+- **SMTP Integration**: Uses secure SMTP with App Passwords (no OAuth required).
 - **HTML & Plain Text**: Support for rich HTML emails with fallback text.
 - **Personalization**: Substitute variables like `{name}`, `{company}` from your CSV.
 - **Resiliency**: Automatically logs failures and supports resuming/retrying.
-- **Rate Limiting**: Configurable delays to respect Gmail API limits.
+- **Rate Limiting**: Configurable delays to respect Gmail limits.
 
 ## 🛠️ Setup
 
 ### 1. Prerequisites
 - Python 3.8+
-- A Google Cloud Project with **Gmail API** enabled.
-- `credentials.json` (OAuth 2.0 Client ID) placed in the project root.
+- A Google Account with **2-Step Verification** enabled.
+- An **App Password** generated from [Google Account Security](https://myaccount.google.com/security).
 
 ### 2. Installation
 
@@ -29,10 +28,12 @@ pip install -r requirements.txt
 ```
 
 ### 3. Configuration
-Copy `.env.example` to `.env` (optional, defaults provided):
+Copy `.env.example` to `.env` and fill in your details:
 
 ```ini
-RATE_LIMIT_DELAY=2  # Seconds between emails
+SMTP_EMAIL=your_email@gmail.com
+SMTP_PASSWORD=xxxx-xxxx-xxxx-xxxx  # Your 16-char App Password
+RATE_LIMIT_DELAY=2
 ```
 
 ## 🏃 Usage
@@ -44,13 +45,6 @@ Sends emails from `leads.csv` using `content.txt`:
 python main.py
 ```
 
-### Draft Mode (Safe Testing)
-Creates drafts in your Gmail Drafts folder instead of sending:
-
-```bash
-python main.py --draft
-```
-
 ### Custom Files
 Specify different lead or content files:
 
@@ -59,7 +53,7 @@ python main.py --leads my_list.csv --content my_offer.html
 ```
 
 ### Dry Run
-Simulates the process without hitting the Gmail API:
+Simulates the process without connecting to SMTP:
 
 ```bash
 python main.py --dry-run
@@ -75,7 +69,7 @@ python main.py --retry
 ## 📂 File Formats
 
 ### Leads (CSV)
-Must have headers. `email` column is required. Other columns are available as variables.
+Must have headers. `email` column is required.
 
 ```csv
 email,name,company
@@ -83,7 +77,7 @@ alice@example.com,Alice,Wonderland Inc
 ```
 
 ### Content (HTML or TXT)
-First line must be `Subject: <Your Subject>`. The rest is the body.
+First line must be `Subject: <Your Subject>`.
 
 **example.html**:
 ```html
@@ -91,16 +85,10 @@ Subject: Hello {name}!
 <html>
 <body>
   <p>Hi {name},</p>
-  <p>Check out our offer for {company}!</p>
 </body>
 </html>
 ```
 
-## 🛡️ Rate Limits & Quotas
-- **Free Gmail**: ~500 emails/day.
-- **Google Workspace**: ~2,000 emails/day.
-- The tool adds a delay (default 2s) to avoid 429 Too Many Requests errors.
-
 ## ⚠️ Troubleshooting
-- **Authentication Failed**: Delete `token.json` and run again to re-login.
-- **Quota Exceeded**: Wait 24 hours.
+- **SMTP AuthenticationError**: Check your App Password in `.env`. Ensure 2FA is on.
+- **Quota Exceeded**: Gmail sends are limited to ~500/day.
