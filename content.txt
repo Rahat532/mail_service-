@@ -1,0 +1,8 @@
+Subject: Hello {name} from {company}
+Hi {name},
+
+This is a test email for {company}.
+We are testing our new bulk mailer.
+
+Best,
+The Team

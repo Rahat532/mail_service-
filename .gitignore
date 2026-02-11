@@ -1,6 +1,7 @@
 # Virtual environment
 venv/
 .venv/
+env/
 
 # Python
 __pycache__/
@@ -11,10 +12,28 @@ __pycache__/
 
 # Logs
 logs/
+*.log
 
 # Credentials & sensitive files
+# Older version
 config.json
 senders.txt
+
+# New Gmail API version
+credentials.json
+token.json
+token.pickle
+.env
+
+# Runtime Data
+failed_emails.csv
+failed_emails.bak.*
+*.csv
+*.tsv
+# Keep sample leads if desired, but general leads shouldn't be committed
+# !leads.csv
+# !content.txt
+# !content.html
 
 # IDE
 .vscode/
