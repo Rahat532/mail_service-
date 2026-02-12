@@ -26,39 +26,122 @@
       <main class="main-grid">
         <!-- Left Column: Configuration -->
         <section class="card config-card">
+          <!-- Email Mode Toggle -->
           <div class="input-group">
-            <label>Leads File Path (.csv)</label>
-            <div class="input-wrapper">
-              <input
-                type="text"
-                id="leadsPath"
-                placeholder="C:\path\to\leads.csv"
-                value="leads.csv"
-              />
+            <label>Email Mode</label>
+            <div class="toggle-container">
+              <div class="toggle-switch">
+                <input
+                  type="radio"
+                  name="emailMode"
+                  id="staticMode"
+                  value="static"
+                  checked
+                />
+                <label for="staticMode" class="toggle-option"
+                  >Static (File-based)</label
+                >
+                <input
+                  type="radio"
+                  name="emailMode"
+                  id="dynamicMode"
+                  value="dynamic"
+                />
+                <label for="dynamicMode" class="toggle-option"
+                  >Dynamic (Text-based)</label
+                >
+              </div>
             </div>
           </div>
 
-          <div class="input-group">
-            <label>Subject File Path (.txt)</label>
-            <div class="input-wrapper">
-              <input
-                type="text"
-                id="subjectPath"
-                placeholder="templates\subject.txt"
-                value="templates/subject.txt"
-              />
+          <!-- Static Mode Fields -->
+          <div id="staticFields">
+            <div class="input-group">
+              <label>Leads File Path (.csv)</label>
+              <div class="input-wrapper">
+                <input
+                  type="text"
+                  id="leadsPath"
+                  placeholder="C:\path\to\leads.csv"
+                  value="leads.csv"
+                />
+              </div>
+            </div>
+
+            <div class="input-group">
+              <label>Subject File Path (.txt)</label>
+              <div class="input-wrapper">
+                <input
+                  type="text"
+                  id="subjectPath"
+                  placeholder="templates\subject.txt"
+                  value="templates/subject.txt"
+                />
+              </div>
+            </div>
+
+            <div class="input-group">
+              <label>Body File Path (.html or .txt)</label>
+              <div class="input-wrapper">
+                <input
+                  type="text"
+                  id="bodyPath"
+                  placeholder="templates\body.html"
+                  value="templates/body.txt"
+                />
+              </div>
             </div>
           </div>
 
-          <div class="input-group">
-            <label>Body File Path (.html or .txt)</label>
-            <div class="input-wrapper">
-              <input
-                type="text"
-                id="bodyPath"
-                placeholder="templates\body.html"
-                value="templates/body.txt"
-              />
+          <!-- Dynamic Mode Fields -->
+          <div id="dynamicFields" style="display: none">
+            <div class="input-group">
+              <label>Subject Line</label>
+              <div class="input-wrapper">
+                <input
+                  type="text"
+                  id="dynamicSubject"
+                  placeholder="Enter subject (use {name}, {company}, etc. for variables)"
+                  value="Hello {name}!"
+                />
+              </div>
+            </div>
+
+            <div class="input-group">
+              <label>Email Body (HTML or Plain Text)</label>
+              <textarea
+                id="dynamicBody"
+                rows="12"
+                placeholder="Enter your email body here. Use {variable} syntax to insert data from CSV columns.&#10;&#10;Example:&#10;Hi {name},&#10;&#10;I noticed you work at {company}..."
+                style="
+                  width: 100%;
+                  background: rgba(15, 23, 42, 0.5);
+                  border: 1px solid var(--glass-border);
+                  border-radius: 0.75rem;
+                  padding: 0.75rem 1rem;
+                  color: var(--text-primary);
+                  outline: none;
+                  font-family: &quot;Fira Code&quot;, monospace;
+                  font-size: 0.875rem;
+                  resize: vertical;
+                "
+              >
+Hi {name},
+
+I hope this email finds you well!</textarea
+              >
+            </div>
+
+            <div class="input-group">
+              <label>Leads File Path (.csv)</label>
+              <div class="input-wrapper">
+                <input
+                  type="text"
+                  id="dynamicLeadsPath"
+                  placeholder="C:\path\to\leads.csv"
+                  value="leads.csv"
+                />
+              </div>
             </div>
           </div>
 

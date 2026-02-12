@@ -12,6 +12,15 @@ const clearLogsBtn = document.getElementById("clearLogsBtn");
 const copyEmailsBtn = document.getElementById("copyEmailsBtn");
 const clearFailuresBtn = document.getElementById("clearFailuresBtn");
 
+// Mode toggle elements
+const staticMode = document.getElementById("staticMode");
+const dynamicMode = document.getElementById("dynamicMode");
+const staticFields = document.getElementById("staticFields");
+const dynamicFields = document.getElementById("dynamicFields");
+const dynamicSubject = document.getElementById("dynamicSubject");
+const dynamicBody = document.getElementById("dynamicBody");
+const dynamicLeadsPath = document.getElementById("dynamicLeadsPath");
+
 // Stats
 const statSuccess = document.getElementById("statSuccess");
 const statFail = document.getElementById("statFail");
@@ -36,14 +45,41 @@ document.querySelectorAll(".tab").forEach((tab) => {
   });
 });
 
+// Toggle between static and dynamic modes
+staticMode.addEventListener("change", () => {
+  if (staticMode.checked) {
+    staticFields.style.display = "block";
+    dynamicFields.style.display = "none";
+  }
+});
+
+dynamicMode.addEventListener("change", () => {
+  if (dynamicMode.checked) {
+    staticFields.style.display = "none";
+    dynamicFields.style.display = "block";
+  }
+});
+
 async function startMailing(isRetry = false, isDryRun = false) {
+  const isDynamic = dynamicMode.checked;
+
   const payload = {
-    leads_path: leadsInput.value,
-    subject_path: subjectInput.value,
-    body_path: bodyInput.value,
     is_retry: isRetry,
     is_dry_run: isDryRun,
+    is_dynamic: isDynamic,
   };
+
+  if (isDynamic) {
+    // Dynamic mode: send content directly
+    payload.leads_path = dynamicLeadsPath.value;
+    payload.subject_content = dynamicSubject.value;
+    payload.body_content = dynamicBody.value;
+  } else {
+    // Static mode: send file paths
+    payload.leads_path = leadsInput.value;
+    payload.subject_path = subjectInput.value;
+    payload.body_path = bodyInput.value;
+  }
 
   try {
     const res = await fetch("/send", {

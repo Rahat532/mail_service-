@@ -40,10 +40,13 @@ FAILED_CSV = Path("failed_emails.csv")
 
 class MailRequest(BaseModel):
     leads_path: str
-    subject_path: str
-    body_path: str
+    subject_path: Optional[str] = None
+    body_path: Optional[str] = None
     is_retry: bool = False
     is_dry_run: bool = False
+    is_dynamic: bool = False
+    subject_content: Optional[str] = None
+    body_content: Optional[str] = None
 
 def load_template_file(path_str: str) -> str:
     path = Path(path_str)
@@ -95,15 +98,29 @@ async def run_mailer(req: MailRequest):
         state.total = len(leads)
         
         # Load templates
-        subj_tpl = load_template_file(req.subject_path)
-        body_html_tpl = None
-        body_txt_tpl = None
-        
-        body_content = load_template_file(req.body_path)
-        if req.body_path.endswith(".html"):
-            body_html_tpl = body_content
+        if req.is_dynamic:
+            # Dynamic mode: use content from request
+            subj_tpl = req.subject_content
+            body_content = req.body_content
+            
+            # Check if body looks like HTML
+            if body_content and ('<' in body_content and '>' in body_content):
+                body_html_tpl = body_content
+                body_txt_tpl = None
+            else:
+                body_txt_tpl = body_content
+                body_html_tpl = None
         else:
-            body_txt_tpl = body_content
+            # Static mode: load from files
+            subj_tpl = load_template_file(req.subject_path)
+            body_html_tpl = None
+            body_txt_tpl = None
+            
+            body_content = load_template_file(req.body_path)
+            if req.body_path.endswith(".html"):
+                body_html_tpl = body_content
+            else:
+                body_txt_tpl = body_content
 
         if not subj_tpl:
             state.current_logs.append(f"Subject file not found: {req.subject_path}")
