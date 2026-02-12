@@ -31,7 +31,9 @@ body {
   display: flex;
   justify-content: center;
 }
-
+.header {
+  display: flex;
+}
 .container {
   width: 100%;
   max-width: 1000px;
@@ -182,6 +184,7 @@ button {
 .btn-secondary {
   background: rgba(255, 255, 255, 0.1);
   color: var(--text-primary);
+  flex: none;
 }
 
 .btn-secondary:hover {

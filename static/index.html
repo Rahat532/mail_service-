@@ -19,8 +19,26 @@
   <body>
     <div class="container">
       <header>
-        <h1>Bulk Mailer</h1>
-        <p>Automate your mail sending work!</p>
+        <div
+          class="header"
+          style="
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+          "
+        >
+          <div>
+            <h1>Bulk Mailer</h1>
+            <p>Automate your mail sending work!</p>
+          </div>
+          <button
+            id="reloadBtn"
+            class="btn-secondary"
+            style="padding: 0.75rem 1.5rem"
+          >
+            <i class="fas fa-sync-alt"></i> Reset App
+          </button>
+        </div>
       </header>
 
       <main class="main-grid">
@@ -39,7 +57,7 @@
                   checked
                 />
                 <label for="staticMode" class="toggle-option"
-                  >Static (File-based)</label
+                  >Static <br />(File-based)</label
                 >
                 <input
                   type="radio"
@@ -48,7 +66,7 @@
                   value="dynamic"
                 />
                 <label for="dynamicMode" class="toggle-option"
-                  >Dynamic (Text-based)</label
+                  >Dynamic <br />(Text-based)</label
                 >
               </div>
             </div>
@@ -152,7 +170,6 @@ I hope this email finds you well!</textarea
             <button id="cancelBtn" class="btn-danger" style="display: none">
               <i class="fas fa-stop"></i> Cancel
             </button>
-            <button id="dryRunBtn" class="btn-secondary">Dry Run</button>
           </div>
         </section>
 

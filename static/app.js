@@ -3,7 +3,6 @@ const subjectInput = document.getElementById("subjectPath");
 const bodyInput = document.getElementById("bodyPath");
 const sendBtn = document.getElementById("sendBtn");
 const cancelBtn = document.getElementById("cancelBtn");
-const dryRunBtn = document.getElementById("dryRunBtn");
 const retryBtn = document.getElementById("retryBtn");
 const logsWindow = document.getElementById("logsWindow");
 const failureList = document.getElementById("failureList");
@@ -11,6 +10,7 @@ const progressBar = document.getElementById("progressBar");
 const clearLogsBtn = document.getElementById("clearLogsBtn");
 const copyEmailsBtn = document.getElementById("copyEmailsBtn");
 const clearFailuresBtn = document.getElementById("clearFailuresBtn");
+const reloadBtn = document.getElementById("reloadBtn");
 
 // Mode toggle elements
 const staticMode = document.getElementById("staticMode");
@@ -62,12 +62,11 @@ dynamicMode.addEventListener("change", () => {
   }
 });
 
-async function startMailing(isRetry = false, isDryRun = false) {
+async function startMailing(isRetry = false) {
   const isDynamic = dynamicMode.checked;
 
   const payload = {
     is_retry: isRetry,
-    is_dry_run: isDryRun,
     is_dynamic: isDynamic,
   };
 
@@ -206,13 +205,31 @@ async function clearFailures() {
   loadFailures();
 }
 
-sendBtn.addEventListener("click", () => startMailing(false, false));
-dryRunBtn.addEventListener("click", () => startMailing(false, true));
-retryBtn.addEventListener("click", () => startMailing(true, false));
+async function resetApp() {
+  if (!confirm("This will reset all stats and logs. Are you sure?")) {
+    return;
+  }
+
+  await fetch("/reset", { method: "POST" });
+
+  // Reset UI
+  statSuccess.innerText = "0";
+  statFail.innerText = "0";
+  statProgress.innerText = "0%";
+  statTotalTime.innerText = "0s";
+  statAvgTime.innerText = "0s";
+  progressBar.style.width = "0%";
+  logsWindow.innerHTML = "";
+  loadFailures();
+}
+
+sendBtn.addEventListener("click", () => startMailing(false));
+retryBtn.addEventListener("click", () => startMailing(true));
 cancelBtn.addEventListener("click", cancelMailing);
 clearLogsBtn.addEventListener("click", clearLogs);
 copyEmailsBtn.addEventListener("click", copyFailedEmails);
 clearFailuresBtn.addEventListener("click", clearFailures);
+reloadBtn.addEventListener("click", resetApp);
 
 // Initial Load
 pollStatus();

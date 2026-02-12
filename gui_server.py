@@ -46,7 +46,6 @@ class MailRequest(BaseModel):
     subject_path: Optional[str] = None
     body_path: Optional[str] = None
     is_retry: bool = False
-    is_dry_run: bool = False
     is_dynamic: bool = False
     subject_content: Optional[str] = None
     body_content: Optional[str] = None
@@ -167,12 +166,6 @@ async def run_mailer(req: MailRequest):
                 body_text = render_template(body_txt_tpl, lead) if body_txt_tpl else None
                 
                 # Round Robin
-                if req.is_dry_run:
-                    state.current_logs.append(f"[DRY RUN] Would send to {email}")
-                    state.success_count += 1
-                    await asyncio.sleep(0.1) # Fast simulation
-                    continue
-
                 service = senders[state.success_count % len(senders)]
                 service.send_email(to_email=email, subject=subject, body_html=body_html, body_text=body_text)
                 
@@ -249,6 +242,21 @@ async def clear_failures():
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Failed to clear: {str(e)}")
     return {"message": "No failures to clear"}
+
+@app.post("/reset")
+async def reset_app():
+    """Reset all application state"""
+    state.is_running = False
+    state.stop_requested = False
+    state.progress = 0
+    state.total = 0
+    state.success_count = 0
+    state.fail_count = 0
+    state.current_logs = []
+    state.start_time = None
+    state.total_elapsed = 0.0
+    state.avg_time_per_email = 0.0
+    return {"message": "App state reset successfully"}
 
 # Mount static files
 app.mount("/", StaticFiles(directory="static", html=True), name="static")
