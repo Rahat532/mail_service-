@@ -23,6 +23,7 @@ senders.txt
 credentials.json
 token.json
 token.pickle
+tokens/
 .env
 
 # Runtime Data

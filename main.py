@@ -11,6 +11,7 @@ from tqdm import tqdm
 from dotenv import load_dotenv
 
 from smtp_service import SMTPService
+from gmail_service import GmailService
 from reader import Reader
 from utils import render_template
 
@@ -77,6 +78,7 @@ def main():
     parser.add_argument("--dry-run", action="store_true", help="Simulate sending without SMTP connection")
     parser.add_argument("--retry", action="store_true", help="Retry failed emails from failed_emails.csv")
     parser.add_argument("--live", action="store_true", help="Actually send emails (override default dry-run mode)")
+    parser.add_argument("--sender", help="Use a specific sender email address (must be authorized in tokens/)")
 
     args = parser.parse_args()
     
@@ -129,18 +131,66 @@ def main():
     
     print(f"📄 Loaded templates from: {tpl_dir}")
 
+
+
     # 3. Authenticate (Skip if Dry Run)
-    smtp_service = None
+    senders = []
+    
     if not dry_run:
-        smtp_email = os.getenv("SMTP_EMAIL")
-        smtp_password = os.getenv("SMTP_PASSWORD")
+        # Check for multiple tokens
+        token_dir = Path("tokens")
+        if token_dir.exists() and list(token_dir.glob("*.json")):
+            print("🔐 Loading multiple sender accounts from 'tokens/'...")
+            try:
+                # Load all available tokens
+                senders = []
+                for t_file in token_dir.glob("*.json"):
+                    svc = GmailService(token_file=str(t_file))
+                    if svc.service:
+                        senders.append(svc)
+                        print(f"   ✓ Authenticated: {svc.email_address}")
+            except Exception as e:
+                print(f"❌ Error loading accounts: {e}")
+        
+        # Fallback to single token.json if no 'tokens/' dir or empty
+        elif os.path.exists("token.json"):
+            print("🔐 Loading single account (token.json)...")
+            svc = GmailService(token_file="token.json")
+            if svc.service:
+                senders.append(svc)
 
-        if not smtp_email or not smtp_password:
-            print("❌ Error: SMTP_EMAIL and SMTP_PASSWORD must be set in .env")
+        # Fallback to SMTP
+        if not senders:
+            smtp_email = os.getenv("SMTP_EMAIL")
+            smtp_password = os.getenv("SMTP_PASSWORD")
+            
+            if smtp_email and smtp_password:
+                print(f"🔐 Initializing SMTP for {smtp_email}...")
+                senders.append(SMTPService(smtp_email, smtp_password))
+            else:
+                print("❌ No valid authentication found (No 'tokens/' directory, no 'token.json', no SMTP credentials).")
+                print("   Run 'python account_manager.py --add <email>' to add accounts.")
+                return
+
+    # Filter by specific sender if requested
+    if args.sender:
+        filtered_senders = []
+        for s in senders:
+            sender_email = getattr(s, 'email_address', None) or getattr(s, 'email', None)
+            if sender_email == args.sender:
+                filtered_senders.append(s)
+        
+        if not filtered_senders:
+            print(f"❌ Error: Sender '{args.sender}' not found in authorized accounts.")
+            print("   Available accounts:")
+            for s in senders:
+                print(f"   - {getattr(s, 'email_address', None) or getattr(s, 'email', None)}")
             return
+        senders = filtered_senders
 
-        print(f"🔐 Initializing SMTP for {smtp_email}...")
-        smtp_service = SMTPService(smtp_email, smtp_password)
+    print(f"✅ Active Senders: {len(senders)}")
+    for s in senders:
+        print(f"   - {getattr(s, 'email_address', None) or getattr(s, 'email', None)}")
 
     # 4. Processing Loop
     print(f"🚀 Starting {'DRY RUN ' if dry_run else ''}process...")
@@ -174,8 +224,17 @@ def main():
                 success_count += 1
                 continue
 
-            # Send via SMTP
-            smtp_service.send_email(to_email=email, subject=subject, body_html=body_html, body_text=body_text)
+            # Load Balance: Round Robin rotation
+            sender_index = success_count % len(senders)
+            current_service = senders[sender_index]
+            
+            # Send via proper service
+            if isinstance(current_service, GmailService):
+                # Gmail API
+                current_service.send_email(to_email=email, subject=subject, body_html=body_html, body_text=body_text)
+            else:
+                # SMTP Service
+                current_service.send_email(to_email=email, subject=subject, body_html=body_html, body_text=body_text)
                 
             log_success(email)
             success_count += 1
