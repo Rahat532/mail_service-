@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Bulk Mailer Pro | Modern Email Automation</title>
+    <link rel="stylesheet" href="style.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1>Bulk Mailer</h1>
+        <p>Automate your mail sending work!</p>
+      </header>
+
+      <main class="main-grid">
+        <!-- Left Column: Configuration -->
+        <section class="card config-card">
+          <div class="input-group">
+            <label>Leads File Path (.csv)</label>
+            <div class="input-wrapper">
+              <input
+                type="text"
+                id="leadsPath"
+                placeholder="C:\path\to\leads.csv"
+                value="leads.csv"
+              />
+            </div>
+          </div>
+
+          <div class="input-group">
+            <label>Subject File Path (.txt)</label>
+            <div class="input-wrapper">
+              <input
+                type="text"
+                id="subjectPath"
+                placeholder="templates\subject.txt"
+                value="templates/subject.txt"
+              />
+            </div>
+          </div>
+
+          <div class="input-group">
+            <label>Body File Path (.html or .txt)</label>
+            <div class="input-wrapper">
+              <input
+                type="text"
+                id="bodyPath"
+                placeholder="templates\body.html"
+                value="templates/body.txt"
+              />
+            </div>
+          </div>
+
+          <div class="button-group">
+            <button id="sendBtn" class="btn-primary">
+              <i class="fas fa-paper-plane"></i> Send Emails
+            </button>
+            <button id="cancelBtn" class="btn-danger" style="display: none">
+              <i class="fas fa-stop"></i> Cancel
+            </button>
+            <button id="dryRunBtn" class="btn-secondary">Dry Run</button>
+          </div>
+        </section>
+
+        <!-- Right Column: Status & Logs -->
+        <section class="card status-card">
+          <div class="tabs">
+            <div class="tab active" data-tab="logs">Live Logs</div>
+            <div class="tab" data-tab="failures">Failures & Retry</div>
+          </div>
+
+          <div id="logsTab" class="tab-content active">
+            <div class="stats-grid">
+              <div class="stat-item">
+                <span class="stat-value" id="statSuccess">0</span>
+                <span class="stat-label">Sent</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-value" id="statFail">0</span>
+                <span class="stat-label">Failed</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-value" id="statProgress">0%</span>
+                <span class="stat-label">Progress</span>
+              </div>
+            </div>
+
+            <div class="progress-container">
+              <div class="progress-bar-bg">
+                <div class="progress-bar-fill" id="progressBar"></div>
+              </div>
+            </div>
+
+            <div
+              style="
+                display: flex;
+                justify-content: flex-end;
+                margin-bottom: 0.5rem;
+              "
+            >
+              <button
+                id="clearLogsBtn"
+                class="btn-secondary"
+                style="padding: 0.5rem 1rem; font-size: 0.875rem"
+              >
+                <i class="fas fa-trash"></i> Clear Logs
+              </button>
+            </div>
+
+            <div class="logs-window" id="logsWindow"></div>
+          </div>
+
+          <div id="failuresTab" class="tab-content">
+            <div class="failure-list" id="failureList">
+              <!-- Populated dynamiclly -->
+              <div
+                class="log-entry log-info"
+                style="padding: 2rem; text-align: center; opacity: 0.5"
+              >
+                No failed emails found.
+              </div>
+            </div>
+
+            <div class="retry-footer">
+              <div style="display: flex; gap: 0.5rem; margin-bottom: 0.75rem">
+                <button
+                  id="copyEmailsBtn"
+                  class="btn-secondary"
+                  style="flex: 1"
+                >
+                  <i class="fas fa-copy"></i> Copy Emails
+                </button>
+                <button
+                  id="clearFailuresBtn"
+                  class="btn-secondary"
+                  style="flex: 1"
+                >
+                  <i class="fas fa-trash"></i> Clear Failures
+                </button>
+              </div>
+              <button id="retryBtn" class="btn-primary" style="width: 100%">
+                <i class="fas fa-redo"></i> Retry Failed Emails
+              </button>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>

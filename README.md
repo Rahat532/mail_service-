@@ -78,9 +78,16 @@ python main.py --live --sender your-email@gmail.com
 
 # Retry previously failed emails
 python main.py --retry --live
-```
 
----
+# GUI
+python gui_server.py
+
+# GUI with virtual environment
+source .venv/Scripts/activate && python gui_server.py
+http://localhost:8000
+or
+http://127.0.0.1:8000
+```
 
 ## 📂 File Formats & Templates
 
