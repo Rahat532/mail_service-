@@ -30,6 +30,9 @@ class AppState:
     success_count = 0
     fail_count = 0
     current_logs = []
+    start_time = None
+    total_elapsed = 0.0
+    avg_time_per_email = 0.0
     
 state = AppState()
 
@@ -74,6 +77,9 @@ async def run_mailer(req: MailRequest):
     state.success_count = 0
     state.fail_count = 0
     state.current_logs = []
+    state.start_time = datetime.now()
+    state.total_elapsed = 0.0
+    state.avg_time_per_email = 0.0
 
     try:
         # Load leads
@@ -153,6 +159,7 @@ async def run_mailer(req: MailRequest):
 
             email = lead.get("email")
             state.current_logs.append(f"Sending to {email}...")
+            email_start_time = datetime.now()
             
             try:
                 subject = render_template(subj_tpl, lead)
@@ -170,7 +177,9 @@ async def run_mailer(req: MailRequest):
                 service.send_email(to_email=email, subject=subject, body_html=body_html, body_text=body_text)
                 
                 state.success_count += 1
-                state.current_logs.append(f"Successfully sent to {email}")
+                email_end_time = datetime.now()
+                email_duration = (email_end_time - email_start_time).total_seconds()
+                state.current_logs.append(f"Successfully sent to {email} (took {email_duration:.2f}s)")
                 
                 # Mock sleep for UI visibility (actually should be the delay)
                 await asyncio.sleep(delay + random.uniform(0.1, 0.5))
@@ -187,8 +196,15 @@ async def run_mailer(req: MailRequest):
     except Exception as e:
         state.current_logs.append(f"Fatal Error: {str(e)}")
     
+    # Calculate final stats
+    if state.start_time:
+        end_time = datetime.now()
+        state.total_elapsed = (end_time - state.start_time).total_seconds()
+        if state.success_count > 0:
+            state.avg_time_per_email = state.total_elapsed / state.success_count
+    
     state.is_running = False
-    state.current_logs.append("Process completed.")
+    state.current_logs.append(f"Process completed. Total time: {state.total_elapsed:.2f}s")
 
 @app.get("/status")
 async def get_status():
@@ -198,7 +214,9 @@ async def get_status():
         "success": state.success_count,
         "fail": state.fail_count,
         "total": state.total,
-        "logs": state.current_logs[-50:] # Only late logs
+        "total_elapsed": round(state.total_elapsed, 2),
+        "avg_time_per_email": round(state.avg_time_per_email, 2),
+        "logs": state.current_logs[-50:] # Only last 50 logs
     }
 
 @app.post("/send")

@@ -25,6 +25,8 @@ const dynamicLeadsPath = document.getElementById("dynamicLeadsPath");
 const statSuccess = document.getElementById("statSuccess");
 const statFail = document.getElementById("statFail");
 const statProgress = document.getElementById("statProgress");
+const statTotalTime = document.getElementById("statTotalTime");
+const statAvgTime = document.getElementById("statAvgTime");
 
 // Tab Logic
 document.querySelectorAll(".tab").forEach((tab) => {
@@ -115,6 +117,8 @@ async function pollStatus() {
     statSuccess.innerText = data.success;
     statFail.innerText = data.fail;
     statProgress.innerText = `${data.progress}%`;
+    statTotalTime.innerText = `${data.total_elapsed}s`;
+    statAvgTime.innerText = `${data.avg_time_per_email}s`;
     progressBar.style.width = `${data.progress}%`;
 
     // Update Logs
